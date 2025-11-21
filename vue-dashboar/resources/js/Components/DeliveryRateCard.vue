@@ -42,22 +42,25 @@ onMounted(async () => {
             Erro ao carregar
         </div>
 
-        <div v-else class="space-y-4">
+        <div v-else>
             <div class="text-sm text-gray-600">
                 {{ delivered }} entregues de {{ total }} pedidos
             </div>
 
-            <div class="text-2xl font-bold text-gray-900">
-                {{ rate }}%
+            <div class="flex items-center gap-3">
+                <div class="text-2xl font-bold text-gray-900">
+                    {{ rate }}%
+                </div>
+
+                <div class="flex-1 w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div class="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                        :style="{ width: rate + '%' }"></div>
+                </div>
             </div>
 
+
             <!-- Barra percentual -->
-            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                    class="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                    :style="{ width: rate + '%' }"
-                ></div>
-            </div>
+
         </div>
     </div>
 </template>

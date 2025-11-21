@@ -28,7 +28,7 @@ onMounted(async () => {
 <template>
     <div class="bg-white border border-gray-200 shadow-sm rounded-lg p-6 w-full max-w-sm">
         <div class="text-sm font-medium text-gray-700 mb-2">
-            Clientes
+            Clientes únicos
         </div>
 
         <div v-if="loading" class="text-gray-400">
@@ -41,7 +41,7 @@ onMounted(async () => {
 
         <div v-else class="space-y-2">
             <div class="text-2xl font-bold text-gray-900">
-                {{ uniqueCustomers }} clientes únicos
+                {{ uniqueCustomers }} 
             </div>
 
             <div class="text-sm text-gray-500">

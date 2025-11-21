@@ -45,7 +45,7 @@ onMounted(async () => {
                     Faturamento Bruto
                 </div>
                 <div class="text-2xl font-bold text-gray-900">
-                    {{ gross }}
+                    R{{ gross }}
                 </div>
             </div>
 
@@ -55,7 +55,7 @@ onMounted(async () => {
                     Total de Reembolsos
                 </div>
                 <div class="text-2xl font-bold text-red-600">
-                    {{ refunds }}
+                    R{{ refunds }}
                 </div>
             </div>
 
@@ -68,7 +68,7 @@ onMounted(async () => {
                     class="text-2xl font-bold"
                     :class="net.includes('-') ? 'text-red-600' : 'text-green-600'"
                 >
-                    {{ net }}
+                    R{{ net }}
                 </div>
             </div>
         </div>

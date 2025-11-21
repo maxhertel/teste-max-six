@@ -244,16 +244,21 @@ class MetricDataService
     /**
      * 6. Produto Mais Vendido
      */
-    public static function getBestSellingProduct(): array
-    {
-        try {
-            $orders = self::getOrdersCollection();
-            
-            $products = collect();
-            
-            foreach ($orders as $order) {
-                if (isset($order['line_items']) && is_array($order['line_items'])) {
-                    foreach ($order['line_items'] as $item) {
+   public static function getBestSellingProduct(): array
+{
+    try {
+        $orders = self::getOrdersCollection();
+        
+        $products = collect();
+        
+        foreach ($orders as $order) {
+            if (isset($order['line_items']) && is_array($order['line_items'])) {
+                foreach ($order['line_items'] as $item) {
+                    // Filtra shipping e outros itens não-produto
+                    if ($item['sku'] != 'PRIORITY+INSUREDSHIPPING!' && 
+                        !str_contains(strtolower($item['name'] ?? ''), 'shipping') &&
+                        !str_contains(strtolower($item['title'] ?? ''), 'shipping')) {
+                        
                         $productName = $item['name'] ?? 'Unknown Product';
                         $quantity = $item['quantity'] ?? 1;
                         $revenue = isset($item['local_currency_item_total_price']) ? 
@@ -263,7 +268,8 @@ class MetricDataService
                             $products->put($productName, [
                                 'name' => $productName,
                                 'total_quantity' => 0,
-                                'total_revenue' => 0
+                                'total_revenue' => 0,
+                                'sku' => $item['sku'] ?? ''
                             ]);
                         }
                         
@@ -274,37 +280,41 @@ class MetricDataService
                     }
                 }
             }
+        }
 
-            $bestSeller = $products->sortByDesc('total_quantity')->first();
+        $bestSeller = $products->sortByDesc('total_quantity')->first();
 
-            if (!$bestSeller) {
-                return [
-                    'product_name' => 'No products found',
-                    'total_quantity' => 0,
-                    'total_revenue' => 0,
-                    'total_revenue_formatted' => '$ 0.00',
-                    'success' => true
-                ];
-            }
-
+        if (!$bestSeller) {
             return [
-                'product_name' => $bestSeller['name'],
-                'total_quantity' => $bestSeller['total_quantity'],
-                'total_revenue' => $bestSeller['total_revenue'],
-                'total_revenue_formatted' => '$ ' . number_format($bestSeller['total_revenue'], 2),
-                'success' => true
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error getting best selling product: ' . $e->getMessage());
-            return [
-                'product_name' => 'Error loading product',
+                'product_name' => 'No products found',
                 'total_quantity' => 0,
                 'total_revenue' => 0,
                 'total_revenue_formatted' => '$ 0.00',
-                'success' => false
+                'sku' => '',
+                'success' => true
             ];
         }
+
+        return [
+            'product_name' => $bestSeller['name'],
+            'total_quantity' => $bestSeller['total_quantity'],
+            'total_revenue' => $bestSeller['total_revenue'],
+            'total_revenue_formatted' => '$ ' . number_format($bestSeller['total_revenue'], 2),
+            'sku' => $bestSeller['sku'],
+            'success' => true
+        ];
+    } catch (\Exception $e) {
+        Log::error('Error getting best selling product: ' . $e->getMessage());
+        return [
+            'product_name' => 'Error loading product',
+            'total_quantity' => 0,
+            'total_revenue' => 0,
+            'total_revenue_formatted' => '$ 0.00',
+            'sku' => '',
+            'success' => false
+        ];
     }
+}
 
     /**
      * 7. Tabela de Pedidos
