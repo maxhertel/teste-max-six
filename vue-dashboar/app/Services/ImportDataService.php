@@ -41,7 +41,6 @@ class ImportDataService
             if ($response->successful()) {
                 $data = $response->json();
 
-                //  NOVO: salva com tags
                 if ($cacheMinutes && $data) {
                     Cache::put($cacheKey, $data, now()->addMinutes($cacheMinutes));
                     Log::info(" Cache armazenado por {$cacheMinutes} min para: {$url}");
