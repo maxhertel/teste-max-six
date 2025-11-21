@@ -39,4 +39,7 @@ Route::get('/metrics/financial-summary', [MetricsController::class, 'financialSu
 Route::get('/metrics/refund-rate', [MetricsController::class, 'refundRate']);
 Route::get('/metrics/best-selling-product', [MetricsController::class, 'bestSellingProduct']);
 Route::get('/metrics/orders-table', [MetricsController::class, 'ordersTable']);
+Route::get('/metrics/top-5-products', [MetricsController::class, 'top5Products']);
+Route::get('/metrics/upsell-analysis', [MetricsController::class, 'upsellAnalysis']);
+Route::get('/metrics/top-10-cities', [MetricsController::class, 'top10Cities']);
 require __DIR__.'/auth.php';

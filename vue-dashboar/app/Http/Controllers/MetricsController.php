@@ -14,11 +14,11 @@ class MetricsController extends Controller
     public function deliveryMetrics(): JsonResponse
     {
         $metrics = MetricDataService::getDeliveryMetrics('https://dev-crm.ogruposix.com/candidato-teste-pratico-backend-dashboard/test-orders');
-        
+
         return response()->json($metrics);
     }
 
-        /**
+    /**
      * 1. Total de Pedidos
      */
     public function totalOrders(): JsonResponse
@@ -73,8 +73,31 @@ class MetricsController extends Controller
     {
         $perPage = $request->get('per_page', 10);
         $page = $request->get('page', 1);
-        
+
         return response()->json(MetricDataService::getOrdersTable($perPage, $page));
     }
 
+    /**
+     * 9. Top 5 Produtos
+     */
+    public function top5Products(): JsonResponse
+    {
+        return response()->json(MetricDataService::getTop5Products());
+    }
+
+    /**
+     * 10. Análise de Upsell
+     */
+    public function upsellAnalysis(): JsonResponse
+    {
+        return response()->json(MetricDataService::getUpsellAnalysis());
+    }
+
+    /**
+     * 11. Top 10 Cidades
+     */
+    public function top10Cities(): JsonResponse
+    {
+        return response()->json(MetricDataService::getTop10Cities());
+    }
 }

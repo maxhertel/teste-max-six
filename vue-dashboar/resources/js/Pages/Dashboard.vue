@@ -1,14 +1,17 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import TotalOrdersCard from '@/Components/TotalOrdersCard.vue'
-import TotalRevenueCard from '@/Components/TotalRevenueCard.vue'
-import UniqueCustomersCard from '@/Components/UniqueCustomersCard.vue'
-import DeliveryRateCard from '@/Components/DeliveryRateCard.vue'
-import FinancialSummaryCards from '@/Components/FinancialSummaryCards.vue'
-import RefundRateCard from '@/Components/RefundRateCard.vue'
-import BestSellingProductCard from '@/Components/BestSellingProductCard.vue'
-import OrdersTable from '@/Components/OrdersTable.vue'
+import TotalOrdersCard from '@/Components/TotalOrdersCard.vue';
+import TotalRevenueCard from '@/Components/TotalRevenueCard.vue';
+import UniqueCustomersCard from '@/Components/UniqueCustomersCard.vue';
+import DeliveryRateCard from '@/Components/DeliveryRateCard.vue';
+import FinancialSummaryCards from '@/Components/FinancialSummaryCards.vue';
+import RefundRateCard from '@/Components/RefundRateCard.vue';
+import BestSellingProductCard from '@/Components/BestSellingProductCard.vue';
+import OrdersTable from '@/Components/OrdersTable.vue';
+import Top5ProductsCard from '@/Components/Top5ProductsCard.vue';
+import UpsellAnalysisCard from '@/Components/UpsellAnalysisCard.vue';
+import TopCitiesCard from '@/Components/TopCitiesCard.vue';
 </script>
 
 <template>
@@ -51,9 +54,19 @@ import OrdersTable from '@/Components/OrdersTable.vue'
                         <BestSellingProductCard />
                     </div>
                 </div>
-                <div class="mt-8">
+                <div class="grid gap-6">
                     <OrdersTable />
                 </div>
+                <div class="grid  gap-6 mb-6">
+                    <div class="col-span-2"></div>
+                    <div class="col-span-2"></div>
+                    <div class="col-span-2"></div>
+                    <Top5ProductsCard />
+                    <UpsellAnalysisCard />
+                    <TopCitiesCard />
+                </div>
+                <!-- Novos cards -->
+
             </div>
         </div>
     </AuthenticatedLayout>
