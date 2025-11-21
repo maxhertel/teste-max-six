@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardMetricsController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -24,4 +25,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+
+Route::get('/metrics', [DashboardMetricsController::class, 'index']);
+Route::get('/metrics/debug', [DashboardMetricsController::class, 'debug']);
 require __DIR__.'/auth.php';
