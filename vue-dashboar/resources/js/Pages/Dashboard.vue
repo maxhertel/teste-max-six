@@ -12,6 +12,8 @@ import OrdersTable from '@/Components/OrdersTable.vue';
 import Top5ProductsCard from '@/Components/Top5ProductsCard.vue';
 import UpsellAnalysisCard from '@/Components/UpsellAnalysisCard.vue';
 import TopCitiesCard from '@/Components/TopCitiesCard.vue';
+import SalesOverTimeChart from '@/Components/SalesOverTimeChart.vue'
+
 </script>
 
 <template>
@@ -66,7 +68,9 @@ import TopCitiesCard from '@/Components/TopCitiesCard.vue';
                     <TopCitiesCard />
                 </div>
                 <!-- Novos cards -->
-
+                <div class="md:col-span-2 xl:col-span-3">
+                <SalesOverTimeChart />
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>

@@ -100,4 +100,22 @@ class MetricsController extends Controller
     {
         return response()->json(MetricDataService::getTop10Cities());
     }
+
+    /**
+     * 12. Vendas ao Longo do Tempo
+     */
+    public function salesOverTime(Request $request): JsonResponse
+    {
+        $groupBy = $request->get('group_by', 'daily');
+        return response()->json(MetricDataService::getSalesOverTime($groupBy));
+    }
+
+    /**
+     * 13. Métricas de Vendas por Período
+     */
+    public function salesMetrics(Request $request): JsonResponse
+    {
+        $period = $request->get('period', '30d');
+        return response()->json(MetricDataService::getSalesMetrics($period));
+    }
 }

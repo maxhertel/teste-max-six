@@ -42,4 +42,6 @@ Route::get('/metrics/orders-table', [MetricsController::class, 'ordersTable']);
 Route::get('/metrics/top-5-products', [MetricsController::class, 'top5Products']);
 Route::get('/metrics/upsell-analysis', [MetricsController::class, 'upsellAnalysis']);
 Route::get('/metrics/top-10-cities', [MetricsController::class, 'top10Cities']);
+Route::get('/metrics/sales-over-time', [MetricsController::class, 'salesOverTime']);
+Route::get('/metrics/sales-metrics', [MetricsController::class, 'salesMetrics']);
 require __DIR__.'/auth.php';

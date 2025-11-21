@@ -28,13 +28,13 @@ class MetricDataService
 
             // Filtra pedidos entregues
             $deliveredOrders = $ordersCollection->filter(function ($order) {
-                return isset($order['fulfillment_status']) && 
-                       $order['fulfillment_status'] === 'Fully Fulfilled';
+                return isset($order['fulfillment_status']) &&
+                    $order['fulfillment_status'] === 'Fully Fulfilled';
             });
 
             $totalOrders = $ordersCollection->count();
             $deliveredCount = $deliveredOrders->count();
-            
+
             // Calcula taxa de entrega
             $deliveryRate = $totalOrders > 0 ? ($deliveredCount / $totalOrders) * 100 : 0;
 
@@ -43,10 +43,9 @@ class MetricDataService
                 'total_orders_count' => $totalOrders,
                 'delivery_rate_percent' => round($deliveryRate, 2)
             ];
-
         } catch (\Exception $e) {
             Log::error('Error getting delivery metrics: ' . $e->getMessage());
-            
+
             return [
                 'delivered_orders_count' => 0,
                 'total_orders_count' => 0,
@@ -56,7 +55,7 @@ class MetricDataService
         }
     }
 
-      private static function getOrdersCollection(): Collection
+    private static function getOrdersCollection(): Collection
     {
         return ImportDataService::importOrdersAsCollection(
             'https://dev-crm.ogruposix.com/candidato-teste-pratico-backend-dashboard/test-orders',
@@ -71,7 +70,7 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
+
             return [
                 'total_orders' => $orders->count(),
                 'success' => true
@@ -89,9 +88,9 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
-            $totalUSD = $orders->sum(function($order) {
-                return isset($order['local_currency_amount']) ? 
+
+            $totalUSD = $orders->sum(function ($order) {
+                return isset($order['local_currency_amount']) ?
                     self::parseCurrency($order['local_currency_amount']) : 0;
             });
 
@@ -125,7 +124,7 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
+
             $uniqueCustomers = $orders->pluck('customer_id')->unique()->count();
             $totalOrders = $orders->count();
             $avgOrdersPerCustomer = $uniqueCustomers > 0 ? $totalOrders / $uniqueCustomers : 0;
@@ -154,17 +153,17 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
-            $grossRevenue = $orders->sum(function($order) {
-                return isset($order['local_currency_amount']) ? 
+
+            $grossRevenue = $orders->sum(function ($order) {
+                return isset($order['local_currency_amount']) ?
                     self::parseCurrency($order['local_currency_amount']) : 0;
             });
 
-            $totalRefunds = $orders->sum(function($order) {
+            $totalRefunds = $orders->sum(function ($order) {
                 $refundAmount = 0;
                 if (isset($order['refunds']) && is_array($order['refunds'])) {
                     foreach ($order['refunds'] as $refund) {
-                        $refundAmount += isset($refund['total_amount']) ? 
+                        $refundAmount += isset($refund['total_amount']) ?
                             self::parseCurrency($refund['total_amount']) : 0;
                     }
                 }
@@ -203,13 +202,13 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
-            $ordersWithRefunds = $orders->filter(function($order) {
+
+            $ordersWithRefunds = $orders->filter(function ($order) {
                 // Verifica se tem refunds ou line_items refunded
                 $hasRefunds = !empty($order['refunds']);
                 $hasRefundedItems = collect($order['line_items'] ?? [])
                     ->contains('is_refunded', 1);
-                
+
                 return $hasRefunds || $hasRefundedItems;
             });
 
@@ -244,77 +243,79 @@ class MetricDataService
     /**
      * 6. Produto Mais Vendido
      */
-   public static function getBestSellingProduct(): array
-{
-    try {
-        $orders = self::getOrdersCollection();
-        
-        $products = collect();
-        
-        foreach ($orders as $order) {
-            if (isset($order['line_items']) && is_array($order['line_items'])) {
-                foreach ($order['line_items'] as $item) {
-                    // Filtra shipping e outros itens não-produto
-                    if ($item['sku'] != 'PRIORITY+INSUREDSHIPPING!' && 
-                        !str_contains(strtolower($item['name'] ?? ''), 'shipping') &&
-                        !str_contains(strtolower($item['title'] ?? ''), 'shipping')) {
-                        
-                        $productName = $item['name'] ?? 'Unknown Product';
-                        $quantity = $item['quantity'] ?? 1;
-                        $revenue = isset($item['local_currency_item_total_price']) ? 
-                            self::parseCurrency($item['local_currency_item_total_price']) : 0;
-                        
-                        if (!$products->has($productName)) {
-                            $products->put($productName, [
-                                'name' => $productName,
-                                'total_quantity' => 0,
-                                'total_revenue' => 0,
-                                'sku' => $item['sku'] ?? ''
-                            ]);
+    public static function getBestSellingProduct(): array
+    {
+        try {
+            $orders = self::getOrdersCollection();
+
+            $products = collect();
+
+            foreach ($orders as $order) {
+                if (isset($order['line_items']) && is_array($order['line_items'])) {
+                    foreach ($order['line_items'] as $item) {
+                        // Filtra shipping e outros itens não-produto
+                        if (
+                            $item['sku'] != 'PRIORITY+INSUREDSHIPPING!' &&
+                            !str_contains(strtolower($item['name'] ?? ''), 'shipping') &&
+                            !str_contains(strtolower($item['title'] ?? ''), 'shipping')
+                        ) {
+
+                            $productName = $item['name'] ?? 'Unknown Product';
+                            $quantity = $item['quantity'] ?? 1;
+                            $revenue = isset($item['local_currency_item_total_price']) ?
+                                self::parseCurrency($item['local_currency_item_total_price']) : 0;
+
+                            if (!$products->has($productName)) {
+                                $products->put($productName, [
+                                    'name' => $productName,
+                                    'total_quantity' => 0,
+                                    'total_revenue' => 0,
+                                    'sku' => $item['sku'] ?? ''
+                                ]);
+                            }
+
+                            $current = $products->get($productName);
+                            $current['total_quantity'] += $quantity;
+                            $current['total_revenue'] += $revenue;
+                            $products->put($productName, $current);
                         }
-                        
-                        $current = $products->get($productName);
-                        $current['total_quantity'] += $quantity;
-                        $current['total_revenue'] += $revenue;
-                        $products->put($productName, $current);
                     }
                 }
             }
-        }
 
-        $bestSeller = $products->sortByDesc('total_quantity')->first();
+            $bestSeller = $products->sortByDesc('total_quantity')->first();
 
-        if (!$bestSeller) {
+            if (!$bestSeller) {
+                return [
+                    'product_name' => 'No products found',
+                    'total_quantity' => 0,
+                    'total_revenue' => 0,
+                    'total_revenue_formatted' => '$ 0.00',
+                    'sku' => '',
+                    'success' => true
+                ];
+            }
+
             return [
-                'product_name' => 'No products found',
+                'product_name' => $bestSeller['name'],
+                'total_quantity' => $bestSeller['total_quantity'],
+                'total_revenue' => $bestSeller['total_revenue'],
+                'total_revenue_formatted' => '$ ' . number_format($bestSeller['total_revenue'], 2),
+                'sku' => $bestSeller['sku'],
+                'success' => true
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting best selling product: ' . $e->getMessage());
+            return [
+                'product_name' => 'Error loading product',
                 'total_quantity' => 0,
                 'total_revenue' => 0,
                 'total_revenue_formatted' => '$ 0.00',
                 'sku' => '',
-                'success' => true
+                'success' => false
             ];
         }
-
-        return [
-            'product_name' => $bestSeller['name'],
-            'total_quantity' => $bestSeller['total_quantity'],
-            'total_revenue' => $bestSeller['total_revenue'],
-            'total_revenue_formatted' => '$ ' . number_format($bestSeller['total_revenue'], 2),
-            'sku' => $bestSeller['sku'],
-            'success' => true
-        ];
-    } catch (\Exception $e) {
-        Log::error('Error getting best selling product: ' . $e->getMessage());
-        return [
-            'product_name' => 'Error loading product',
-            'total_quantity' => 0,
-            'total_revenue' => 0,
-            'total_revenue_formatted' => '$ 0.00',
-            'sku' => '',
-            'success' => false
-        ];
     }
-}
 
     /**
      * 7. Tabela de Pedidos
@@ -323,13 +324,13 @@ class MetricDataService
     {
         try {
             $orders = self::getOrdersCollection();
-            
+
             // Paginação manual
             $total = $orders->count();
             $offset = ($page - 1) * $perPage;
             $paginatedOrders = $orders->slice($offset, $perPage);
-            
-            $formattedOrders = $paginatedOrders->map(function($order) {
+
+            $formattedOrders = $paginatedOrders->map(function ($order) {
                 return [
                     'id' => $order['id'] ?? 'N/A',
                     'order_number' => $order['order_number'] ?? $order['name'] ?? 'N/A',
@@ -338,10 +339,10 @@ class MetricDataService
                     'financial_status' => self::getFinancialStatusText($order['financial_status'] ?? ''),
                     'fulfillment_status' => $order['fulfillment_status'] ?? 'N/A',
                     'amount' => $order['local_currency_amount'] ?? '0.00',
-                    'amount_float' => isset($order['local_currency_amount']) ? 
+                    'amount_float' => isset($order['local_currency_amount']) ?
                         self::parseCurrency($order['local_currency_amount']) : 0,
                     'created_at' => $order['created_at'] ?? 'N/A',
-                    'formatted_date' => isset($order['created_at']) ? 
+                    'formatted_date' => isset($order['created_at']) ?
                         \Carbon\Carbon::parse($order['created_at'])->format('d/m/Y H:i') : 'N/A'
                 ];
             });
@@ -384,7 +385,7 @@ class MetricDataService
     {
         $statusMap = [
             1 => 'pending',
-            2 => 'authorized', 
+            2 => 'authorized',
             3 => 'paid',
             4 => 'partially_paid',
             5 => 'refunded',
@@ -395,263 +396,566 @@ class MetricDataService
     }
 
     /**
- * 9. Top 5 Produtos Mais Vendidos
- */
-public static function getTop5Products(): array
-{
-    try {
-        $orders = self::getOrdersCollection();
-        
-        $products = collect();
-        
-        foreach ($orders as $order) {
-            if (isset($order['line_items']) && is_array($order['line_items'])) {
-                foreach ($order['line_items'] as $item) {
-                    // Filtra shipping e outros itens não-produto
-                    if ($item['sku'] != 'PRIORITY+INSUREDSHIPPING!' && 
-                        !str_contains(strtolower($item['name'] ?? ''), 'shipping') &&
-                        !str_contains(strtolower($item['title'] ?? ''), 'shipping')) {
-                        
-                        $productName = $item['name'] ?? 'Unknown Product';
-                        $quantity = $item['quantity'] ?? 1;
-                        $revenue = isset($item['local_currency_item_total_price']) ? 
-                            self::parseCurrency($item['local_currency_item_total_price']) : 0;
-                        
-                        if (!$products->has($productName)) {
-                            $products->put($productName, [
-                                'name' => $productName,
-                                'total_quantity' => 0,
-                                'total_revenue' => 0,
-                                'sku' => $item['sku'] ?? '',
-                                'vendor' => $item['vendor'] ?? ''
-                            ]);
+     * 9. Top 5 Produtos Mais Vendidos
+     */
+    public static function getTop5Products(): array
+    {
+        try {
+            $orders = self::getOrdersCollection();
+
+            $products = collect();
+
+            foreach ($orders as $order) {
+                if (isset($order['line_items']) && is_array($order['line_items'])) {
+                    foreach ($order['line_items'] as $item) {
+                        // Filtra shipping e outros itens não-produto
+                        if (
+                            $item['sku'] != 'PRIORITY+INSUREDSHIPPING!' &&
+                            !str_contains(strtolower($item['name'] ?? ''), 'shipping') &&
+                            !str_contains(strtolower($item['title'] ?? ''), 'shipping')
+                        ) {
+
+                            $productName = $item['name'] ?? 'Unknown Product';
+                            $quantity = $item['quantity'] ?? 1;
+                            $revenue = isset($item['local_currency_item_total_price']) ?
+                                self::parseCurrency($item['local_currency_item_total_price']) : 0;
+
+                            if (!$products->has($productName)) {
+                                $products->put($productName, [
+                                    'name' => $productName,
+                                    'total_quantity' => 0,
+                                    'total_revenue' => 0,
+                                    'sku' => $item['sku'] ?? '',
+                                    'vendor' => $item['vendor'] ?? ''
+                                ]);
+                            }
+
+                            $current = $products->get($productName);
+                            $current['total_quantity'] += $quantity;
+                            $current['total_revenue'] += $revenue;
+                            $products->put($productName, $current);
                         }
-                        
-                        $current = $products->get($productName);
-                        $current['total_quantity'] += $quantity;
-                        $current['total_revenue'] += $revenue;
-                        $products->put($productName, $current);
-                    }
-                }
-            }
-        }
-
-        $topProducts = $products->sortByDesc('total_quantity')
-                               ->take(5)
-                               ->map(function($product) {
-                                   return [
-                                       'name' => $product['name'],
-                                       'total_quantity' => $product['total_quantity'],
-                                       'total_revenue' => $product['total_revenue'],
-                                       'total_revenue_formatted' => '$ ' . number_format($product['total_revenue'], 2),
-                                       'sku' => $product['sku'],
-                                       'vendor' => $product['vendor']
-                                   ];
-                               })
-                               ->values();
-
-        return [
-            'top_products' => $topProducts,
-            'success' => true
-        ];
-    } catch (\Exception $e) {
-        Log::error('Error getting top 5 products: ' . $e->getMessage());
-        return [
-            'top_products' => [],
-            'success' => false
-        ];
-    }
-}
-
-/**
- * 10. Análise de Upsell
- */
-public static function getUpsellAnalysis(): array
-{
-    try {
-        $orders = self::getOrdersCollection();
-        
-        $upsellData = [
-            'total_orders' => 0,
-            'orders_with_upsell' => 0,
-            'upsell_rate' => 0,
-            'total_upsell_revenue' => 0,
-            'upsell_products' => collect()
-        ];
-
-        foreach ($orders as $order) {
-            $upsellData['total_orders']++;
-            
-            $hasUpsell = false;
-            $orderUpsellRevenue = 0;
-
-            if (isset($order['line_items']) && is_array($order['line_items'])) {
-                foreach ($order['line_items'] as $item) {
-                    // Identifica upsells (geralmente tem up_sell_id ou estão em posições específicas)
-                    $isUpsell = isset($item['up_sell_id']) && $item['up_sell_id'] > 0 ||
-                                isset($item['up_sell_type']) && !empty($item['up_sell_type']) ||
-                                str_contains(strtolower($item['name'] ?? ''), 'upsell') ||
-                                str_contains(strtolower($item['title'] ?? ''), 'upsell');
-
-                    if ($isUpsell) {
-                        $hasUpsell = true;
-                        $revenue = isset($item['local_currency_item_total_price']) ? 
-                            self::parseCurrency($item['local_currency_item_total_price']) : 0;
-                        $orderUpsellRevenue += $revenue;
-
-                        // Coleta dados do produto de upsell
-                        $productName = $item['name'] ?? 'Unknown Upsell Product';
-                        if (!$upsellData['upsell_products']->has($productName)) {
-                            $upsellData['upsell_products']->put($productName, [
-                                'name' => $productName,
-                                'count' => 0,
-                                'total_revenue' => 0,
-                                'up_sell_type' => $item['up_sell_type'] ?? 'unknown'
-                            ]);
-                        }
-
-                        $current = $upsellData['upsell_products']->get($productName);
-                        $current['count']++;
-                        $current['total_revenue'] += $revenue;
-                        $upsellData['upsell_products']->put($productName, $current);
                     }
                 }
             }
 
-            if ($hasUpsell) {
-                $upsellData['orders_with_upsell']++;
-                $upsellData['total_upsell_revenue'] += $orderUpsellRevenue;
-            }
+            $topProducts = $products->sortByDesc('total_quantity')
+                ->take(5)
+                ->map(function ($product) {
+                    return [
+                        'name' => $product['name'],
+                        'total_quantity' => $product['total_quantity'],
+                        'total_revenue' => $product['total_revenue'],
+                        'total_revenue_formatted' => '$ ' . number_format($product['total_revenue'], 2),
+                        'sku' => $product['sku'],
+                        'vendor' => $product['vendor']
+                    ];
+                })
+                ->values();
+
+            return [
+                'top_products' => $topProducts,
+                'success' => true
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting top 5 products: ' . $e->getMessage());
+            return [
+                'top_products' => [],
+                'success' => false
+            ];
         }
-
-        // Calcula taxa de upsell
-        $upsellData['upsell_rate'] = $upsellData['total_orders'] > 0 ? 
-            ($upsellData['orders_with_upsell'] / $upsellData['total_orders']) * 100 : 0;
-
-        // Ordena produtos de upsell por revenue
-        $topUpsellProducts = $upsellData['upsell_products']
-            ->sortByDesc('total_revenue')
-            ->take(5)
-            ->map(function($product) {
-                return [
-                    'name' => $product['name'],
-                    'count' => $product['count'],
-                    'total_revenue' => $product['total_revenue'],
-                    'total_revenue_formatted' => '$ ' . number_format($product['total_revenue'], 2),
-                    'up_sell_type' => $product['up_sell_type']
-                ];
-            })
-            ->values();
-
-        return [
-            'total_orders' => $upsellData['total_orders'],
-            'orders_with_upsell' => $upsellData['orders_with_upsell'],
-            'upsell_rate' => round($upsellData['upsell_rate'], 2),
-            'total_upsell_revenue' => $upsellData['total_upsell_revenue'],
-            'total_upsell_revenue_formatted' => '$ ' . number_format($upsellData['total_upsell_revenue'], 2),
-            'avg_upsell_value' => $upsellData['orders_with_upsell'] > 0 ? 
-                $upsellData['total_upsell_revenue'] / $upsellData['orders_with_upsell'] : 0,
-            'top_upsell_products' => $topUpsellProducts,
-            'success' => true
-        ];
-    } catch (\Exception $e) {
-        Log::error('Error getting upsell analysis: ' . $e->getMessage());
-        return [
-            'total_orders' => 0,
-            'orders_with_upsell' => 0,
-            'upsell_rate' => 0,
-            'total_upsell_revenue' => 0,
-            'total_upsell_revenue_formatted' => '$ 0.00',
-            'avg_upsell_value' => 0,
-            'top_upsell_products' => [],
-            'success' => false
-        ];
     }
-}
-/**
- * 11. Top 10 Cidades
- */
-public static function getTop10Cities(): array
-{
-    try {
-        $orders = self::getOrdersCollection();
-        
-        $cities = collect();
-        
-        foreach ($orders as $order) {
-            // Tenta pegar a cidade do shipping address primeiro, depois billing
-            $city = $order['shipping_address']['city'] ?? 
-                    $order['billing_address']['city'] ?? 
+
+    /**
+     * 10. Análise de Upsell
+     */
+    public static function getUpsellAnalysis(): array
+    {
+        try {
+            $orders = self::getOrdersCollection();
+
+            $upsellData = [
+                'total_orders' => 0,
+                'orders_with_upsell' => 0,
+                'upsell_rate' => 0,
+                'total_upsell_revenue' => 0,
+                'upsell_products' => collect()
+            ];
+
+            foreach ($orders as $order) {
+                $upsellData['total_orders']++;
+
+                $hasUpsell = false;
+                $orderUpsellRevenue = 0;
+
+                if (isset($order['line_items']) && is_array($order['line_items'])) {
+                    foreach ($order['line_items'] as $item) {
+                        // Identifica upsells (geralmente tem up_sell_id ou estão em posições específicas)
+                        $isUpsell = isset($item['up_sell_id']) && $item['up_sell_id'] > 0 ||
+                            isset($item['up_sell_type']) && !empty($item['up_sell_type']) ||
+                            str_contains(strtolower($item['name'] ?? ''), 'upsell') ||
+                            str_contains(strtolower($item['title'] ?? ''), 'upsell');
+
+                        if ($isUpsell) {
+                            $hasUpsell = true;
+                            $revenue = isset($item['local_currency_item_total_price']) ?
+                                self::parseCurrency($item['local_currency_item_total_price']) : 0;
+                            $orderUpsellRevenue += $revenue;
+
+                            // Coleta dados do produto de upsell
+                            $productName = $item['name'] ?? 'Unknown Upsell Product';
+                            if (!$upsellData['upsell_products']->has($productName)) {
+                                $upsellData['upsell_products']->put($productName, [
+                                    'name' => $productName,
+                                    'count' => 0,
+                                    'total_revenue' => 0,
+                                    'up_sell_type' => $item['up_sell_type'] ?? 'unknown'
+                                ]);
+                            }
+
+                            $current = $upsellData['upsell_products']->get($productName);
+                            $current['count']++;
+                            $current['total_revenue'] += $revenue;
+                            $upsellData['upsell_products']->put($productName, $current);
+                        }
+                    }
+                }
+
+                if ($hasUpsell) {
+                    $upsellData['orders_with_upsell']++;
+                    $upsellData['total_upsell_revenue'] += $orderUpsellRevenue;
+                }
+            }
+
+            // Calcula taxa de upsell
+            $upsellData['upsell_rate'] = $upsellData['total_orders'] > 0 ?
+                ($upsellData['orders_with_upsell'] / $upsellData['total_orders']) * 100 : 0;
+
+            // Ordena produtos de upsell por revenue
+            $topUpsellProducts = $upsellData['upsell_products']
+                ->sortByDesc('total_revenue')
+                ->take(5)
+                ->map(function ($product) {
+                    return [
+                        'name' => $product['name'],
+                        'count' => $product['count'],
+                        'total_revenue' => $product['total_revenue'],
+                        'total_revenue_formatted' => '$ ' . number_format($product['total_revenue'], 2),
+                        'up_sell_type' => $product['up_sell_type']
+                    ];
+                })
+                ->values();
+
+            return [
+                'total_orders' => $upsellData['total_orders'],
+                'orders_with_upsell' => $upsellData['orders_with_upsell'],
+                'upsell_rate' => round($upsellData['upsell_rate'], 2),
+                'total_upsell_revenue' => $upsellData['total_upsell_revenue'],
+                'total_upsell_revenue_formatted' => '$ ' . number_format($upsellData['total_upsell_revenue'], 2),
+                'avg_upsell_value' => $upsellData['orders_with_upsell'] > 0 ?
+                    $upsellData['total_upsell_revenue'] / $upsellData['orders_with_upsell'] : 0,
+                'top_upsell_products' => $topUpsellProducts,
+                'success' => true
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting upsell analysis: ' . $e->getMessage());
+            return [
+                'total_orders' => 0,
+                'orders_with_upsell' => 0,
+                'upsell_rate' => 0,
+                'total_upsell_revenue' => 0,
+                'total_upsell_revenue_formatted' => '$ 0.00',
+                'avg_upsell_value' => 0,
+                'top_upsell_products' => [],
+                'success' => false
+            ];
+        }
+    }
+    /**
+     * 11. Top 10 Cidades
+     */
+    public static function getTop10Cities(): array
+    {
+        try {
+            $orders = self::getOrdersCollection();
+
+            $cities = collect();
+
+            foreach ($orders as $order) {
+                // Tenta pegar a cidade do shipping address primeiro, depois billing
+                $city = $order['shipping_address']['city'] ??
+                    $order['billing_address']['city'] ??
                     'Unknown City';
-            
-            $state = $order['shipping_address']['province_code'] ?? 
-                    $order['billing_address']['province_code'] ?? 
-                    $order['shipping_address']['province'] ?? 
-                    $order['billing_address']['province'] ?? 
-                    'Unknown State';
-            
-            $country = $order['shipping_address']['country_code'] ?? 
-                      $order['billing_address']['country_code'] ?? 
-                      $order['shipping_address']['country'] ?? 
-                      $order['billing_address']['country'] ?? 
-                      'Unknown Country';
 
-            $cityKey = $city . ', ' . $state . ', ' . $country;
+                $state = $order['shipping_address']['province_code'] ??
+                    $order['billing_address']['province_code'] ??
+                    $order['shipping_address']['province'] ??
+                    $order['billing_address']['province'] ??
+                    'Unknown State';
+
+                $country = $order['shipping_address']['country_code'] ??
+                    $order['billing_address']['country_code'] ??
+                    $order['shipping_address']['country'] ??
+                    $order['billing_address']['country'] ??
+                    'Unknown Country';
+
+                $cityKey = $city . ', ' . $state . ', ' . $country;
+
+                if (!$cities->has($cityKey)) {
+                    $cities->put($cityKey, [
+                        'city' => $city,
+                        'state' => $state,
+                        'country' => $country,
+                        'order_count' => 0,
+                        'total_revenue' => 0,
+                        'customers' => collect()
+                    ]);
+                }
+
+                $current = $cities->get($cityKey);
+                $current['order_count']++;
+
+                $revenue = isset($order['local_currency_amount']) ?
+                    self::parseCurrency($order['local_currency_amount']) : 0;
+                $current['total_revenue'] += $revenue;
+
+                // Conta clientes únicos por cidade
+                $customerId = $order['customer_id'] ?? null;
+                if ($customerId && !$current['customers']->contains($customerId)) {
+                    $current['customers']->push($customerId);
+                }
+
+                $cities->put($cityKey, $current);
+            }
+
+            $topCities = $cities->sortByDesc('order_count')
+                ->take(10)
+                ->map(function ($cityData, $cityKey) {
+                    return [
+                        'city' => $cityData['city'],
+                        'state' => $cityData['state'],
+                        'country' => $cityData['country'],
+                        'order_count' => $cityData['order_count'],
+                        'total_revenue' => $cityData['total_revenue'],
+                        'total_revenue_formatted' => '$ ' . number_format($cityData['total_revenue'], 2),
+                        'unique_customers' => $cityData['customers']->count(),
+                        'avg_order_value' => $cityData['order_count'] > 0 ?
+                            $cityData['total_revenue'] / $cityData['order_count'] : 0
+                    ];
+                })
+                ->values();
+
+            return [
+                'top_cities' => $topCities,
+                'success' => true
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting top 10 cities: ' . $e->getMessage());
+            return [
+                'top_cities' => [],
+                'success' => false
+            ];
+        }
+    }
+
+
+    /**
+ * 12. Vendas ao Longo do Tempo (Formatado para Chart.js)
+ */
+public static function getSalesOverTime(string $groupBy = 'daily'): array
+{
+    try {
+        $orders = self::getOrdersCollection();
+        
+        $salesData = collect();
+        
+        foreach ($orders as $order) {
+            if (!isset($order['created_at'])) {
+                continue;
+            }
             
-            if (!$cities->has($cityKey)) {
-                $cities->put($cityKey, [
-                    'city' => $city,
-                    'state' => $state,
-                    'country' => $country,
-                    'order_count' => 0,
+            $orderDate = \Carbon\Carbon::parse($order['created_at']);
+            $revenue = isset($order['local_currency_amount']) ? 
+                self::parseCurrency($order['local_currency_amount']) : 0;
+            
+            // Agrupa por período
+            if ($groupBy === 'daily') {
+                $periodKey = $orderDate->format('Y-m-d');
+                $label = $orderDate->format('d/m');
+            } elseif ($groupBy === 'weekly') {
+                $periodKey = $orderDate->startOfWeek()->format('Y-m-d');
+                $label = $orderDate->format('W/Y');
+            } elseif ($groupBy === 'monthly') {
+                $periodKey = $orderDate->format('Y-m');
+                $label = $orderDate->format('M/Y');
+            } else {
+                $periodKey = $orderDate->format('Y-m-d');
+                $label = $orderDate->format('d/m');
+            }
+            
+            if (!$salesData->has($periodKey)) {
+                $salesData->put($periodKey, [
+                    'label' => $label,
+                    'period_key' => $periodKey,
                     'total_revenue' => 0,
-                    'customers' => collect()
+                    'order_count' => 0,
+                    'date' => $orderDate
                 ]);
             }
             
-            $current = $cities->get($cityKey);
-            $current['order_count']++;
-            
-            $revenue = isset($order['local_currency_amount']) ? 
-                self::parseCurrency($order['local_currency_amount']) : 0;
+            $current = $salesData->get($periodKey);
             $current['total_revenue'] += $revenue;
-            
-            // Conta clientes únicos por cidade
-            $customerId = $order['customer_id'] ?? null;
-            if ($customerId && !$current['customers']->contains($customerId)) {
-                $current['customers']->push($customerId);
-            }
-            
-            $cities->put($cityKey, $current);
+            $current['order_count']++;
+            $salesData->put($periodKey, $current);
         }
-
-        $topCities = $cities->sortByDesc('order_count')
-                           ->take(10)
-                           ->map(function($cityData, $cityKey) {
-                               return [
-                                   'city' => $cityData['city'],
-                                   'state' => $cityData['state'],
-                                   'country' => $cityData['country'],
-                                   'order_count' => $cityData['order_count'],
-                                   'total_revenue' => $cityData['total_revenue'],
-                                   'total_revenue_formatted' => '$ ' . number_format($cityData['total_revenue'], 2),
-                                   'unique_customers' => $cityData['customers']->count(),
-                                   'avg_order_value' => $cityData['order_count'] > 0 ? 
-                                       $cityData['total_revenue'] / $cityData['order_count'] : 0
-                               ];
-                           })
-                           ->values();
+        
+        // Ordena por data e formata para Chart.js
+        $sortedData = $salesData->sortBy('period_key');
+        
+        // Prepara dados para Chart.js (Line Chart)
+        $chartData = [
+            'labels' => $sortedData->pluck('label')->values()->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Receita ($)',
+                    'data' => $sortedData->pluck('total_revenue')->values()->toArray(),
+                    'borderColor' => 'rgb(75, 192, 192)',
+                    'backgroundColor' => 'rgba(75, 192, 192, 0.2)',
+                    'tension' => 0.1,
+                    'yAxisID' => 'y'
+                ],
+                [
+                    'label' => 'Número de Pedidos',
+                    'data' => $sortedData->pluck('order_count')->values()->toArray(),
+                    'borderColor' => 'rgb(255, 99, 132)',
+                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
+                    'tension' => 0.1,
+                    'yAxisID' => 'y1'
+                ]
+            ]
+        ];
+        
+        // Prepara dados para Chart.js (Bar Chart - alternativo)
+        $barChartData = [
+            'labels' => $sortedData->pluck('label')->values()->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Receita ($)',
+                    'data' => $sortedData->pluck('total_revenue')->values()->toArray(),
+                    'backgroundColor' => 'rgba(54, 162, 235, 0.8)',
+                    'borderColor' => 'rgba(54, 162, 235, 1)',
+                    'borderWidth' => 1
+                ]
+            ]
+        ];
+        
+        // Estatísticas resumidas
+        $summary = [
+            'total_periods' => $sortedData->count(),
+            'total_revenue' => $sortedData->sum('total_revenue'),
+            'total_orders' => $sortedData->sum('order_count'),
+            'avg_revenue_per_period' => $sortedData->avg('total_revenue'),
+            'avg_orders_per_period' => $sortedData->avg('order_count'),
+            'best_period' => $sortedData->sortByDesc('total_revenue')->first(),
+            'worst_period' => $sortedData->sortBy('total_revenue')->first()
+        ];
 
         return [
-            'top_cities' => $topCities,
+            'chart_data' => $chartData,
+            'bar_chart_data' => $barChartData,
+            'raw_data' => $sortedData->values(),
+            'summary' => $summary,
+            'group_by' => $groupBy,
             'success' => true
         ];
     } catch (\Exception $e) {
-        Log::error('Error getting top 10 cities: ' . $e->getMessage());
+        Log::error('Error getting sales over time: ' . $e->getMessage());
         return [
-            'top_cities' => [],
+            'chart_data' => [
+                'labels' => [],
+                'datasets' => []
+            ],
+            'bar_chart_data' => [
+                'labels' => [],
+                'datasets' => []
+            ],
+            'raw_data' => [],
+            'summary' => [],
+            'group_by' => $groupBy,
             'success' => false
         ];
     }
+}
+
+/**
+ * 13. Métricas de Vendas por Período (Alternativo para múltiplos gráficos)
+ */
+public static function getSalesMetrics(string $period = '30d'): array
+{
+    try {
+        $orders = self::getOrdersCollection();
+        
+        $endDate = \Carbon\Carbon::now();
+        
+        // Define o período
+        if ($period === '7d') {
+            $startDate = $endDate->copy()->subDays(7);
+            $groupBy = 'daily';
+        } elseif ($period === '30d') {
+            $startDate = $endDate->copy()->subDays(30);
+            $groupBy = 'daily';
+        } elseif ($period === '90d') {
+            $startDate = $endDate->copy()->subDays(90);
+            $groupBy = 'weekly';
+        } elseif ($period === '1y') {
+            $startDate = $endDate->copy()->subYear();
+            $groupBy = 'monthly';
+        } else {
+            $startDate = $endDate->copy()->subDays(30);
+            $groupBy = 'daily';
+        }
+        
+        $filteredOrders = $orders->filter(function($order) use ($startDate, $endDate) {
+            if (!isset($order['created_at'])) {
+                return false;
+            }
+            $orderDate = \Carbon\Carbon::parse($order['created_at']);
+            return $orderDate->between($startDate, $endDate);
+        });
+        
+        // Reutiliza a lógica do método anterior
+        $salesData = collect();
+        
+        foreach ($filteredOrders as $order) {
+            $orderDate = \Carbon\Carbon::parse($order['created_at']);
+            $revenue = isset($order['local_currency_amount']) ? 
+                self::parseCurrency($order['local_currency_amount']) : 0;
+            
+            if ($groupBy === 'daily') {
+                $periodKey = $orderDate->format('Y-m-d');
+                $label = $orderDate->format('d/m');
+            } elseif ($groupBy === 'weekly') {
+                $periodKey = $orderDate->startOfWeek()->format('Y-m-d');
+                $label = 'Sem ' . $orderDate->format('W/Y');
+            } else {
+                $periodKey = $orderDate->format('Y-m');
+                $label = $orderDate->format('M/Y');
+            }
+            
+            if (!$salesData->has($periodKey)) {
+                $salesData->put($periodKey, [
+                    'label' => $label,
+                    'period_key' => $periodKey,
+                    'total_revenue' => 0,
+                    'order_count' => 0
+                ]);
+            }
+            
+            $current = $salesData->get($periodKey);
+            $current['total_revenue'] += $revenue;
+            $current['order_count']++;
+            $salesData->put($periodKey, $current);
+        }
+        
+        // Preenche períodos vazios
+        $completeData = self::fillEmptyPeriods($salesData, $startDate, $endDate, $groupBy);
+        $sortedData = $completeData->sortBy('period_key');
+        
+        // Dados para gráfico de linha (Receita e Pedidos)
+        $lineChartData = [
+            'labels' => $sortedData->pluck('label')->values()->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Receita ($)',
+                    'data' => $sortedData->pluck('total_revenue')->values()->toArray(),
+                    'borderColor' => 'rgb(59, 130, 246)',
+                    'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                    'borderWidth' => 2,
+                    'fill' => true
+                ]
+            ]
+        ];
+        
+        // Dados para gráfico de barras (Número de Pedidos)
+        $barChartData = [
+            'labels' => $sortedData->pluck('label')->values()->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Pedidos',
+                    'data' => $sortedData->pluck('order_count')->values()->toArray(),
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.8)',
+                    'borderColor' => 'rgba(16, 185, 129, 1)',
+                    'borderWidth' => 1
+                ]
+            ]
+        ];
+
+        return [
+            'line_chart' => $lineChartData,
+            'bar_chart' => $barChartData,
+            'period' => $period,
+            'group_by' => $groupBy,
+            'date_range' => [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d')
+            ],
+            'summary' => [
+                'total_revenue' => $sortedData->sum('total_revenue'),
+                'total_orders' => $sortedData->sum('order_count'),
+                'avg_daily_revenue' => $sortedData->avg('total_revenue'),
+                'periods_count' => $sortedData->count()
+            ],
+            'success' => true
+        ];
+    } catch (\Exception $e) {
+        Log::error('Error getting sales metrics: ' . $e->getMessage());
+        return [
+            'line_chart' => ['labels' => [], 'datasets' => []],
+            'bar_chart' => ['labels' => [], 'datasets' => []],
+            'period' => $period,
+            'group_by' => 'daily',
+            'date_range' => [],
+            'summary' => [],
+            'success' => false
+        ];
+    }
+}
+
+/**
+ * Preenche períodos vazios para o gráfico
+ */
+private static function fillEmptyPeriods($data, $startDate, $endDate, $groupBy): Collection
+{
+    $filledData = collect();
+    $current = $startDate->copy();
+    
+    while ($current <= $endDate) {
+        if ($groupBy === 'daily') {
+            $periodKey = $current->format('Y-m-d');
+            $label = $current->format('d/m');
+            $current->addDay();
+        } elseif ($groupBy === 'weekly') {
+            $periodKey = $current->startOfWeek()->format('Y-m-d');
+            $label = 'Sem ' . $current->format('W/Y');
+            $current->addWeek();
+        } else {
+            $periodKey = $current->format('Y-m');
+            $label = $current->format('M/Y');
+            $current->addMonth();
+        }
+        
+        if ($data->has($periodKey)) {
+            $filledData->put($periodKey, $data->get($periodKey));
+        } else {
+            $filledData->put($periodKey, [
+                'label' => $label,
+                'period_key' => $periodKey,
+                'total_revenue' => 0,
+                'order_count' => 0
+            ]);
+        }
+    }
+    
+    return $filledData;
 }
 }
