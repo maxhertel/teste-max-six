@@ -32,8 +32,8 @@ Route::get('/metrics', [DashboardMetricsController::class, 'index']);
 Route::get('/metrics/debug', [DashboardMetricsController::class, 'debug']);
 
 Route::get('/metrics/delivery', [MetricsController::class, 'deliveryMetrics']);
-Route::get('/metrics/total-orders', [MetricsController::class, 'totalOrders']);
-Route::get('/metrics/total-revenue', [MetricsController::class, 'totalRevenue']);
+Route::get('/metrics/total-orders', [MetricsController::class, 'totalOrders']);//
+Route::get('/metrics/total-revenue', [MetricsController::class, 'totalRevenue']);//
 Route::get('/metrics/unique-customers', [MetricsController::class, 'uniqueCustomers']);
 Route::get('/metrics/financial-summary', [MetricsController::class, 'financialSummary']);
 Route::get('/metrics/refund-rate', [MetricsController::class, 'refundRate']);
